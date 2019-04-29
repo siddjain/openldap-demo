@@ -1,0 +1,8 @@
+*.swp
+*.pem
+*.key
+node_modules/
+certs/
+data/
+backup/
+config/
