@@ -37,10 +37,25 @@ done
 
 ## Troubleshooting
 
-Problem: ldap server won't start
-Solution:
+#### ldap server won't start  
+
 1. First make sure you have set environment variables to correct values etc.
 2. Try pinning the docker image to [this](https://github.com/tiredofit/docker-openldap/commit/87528f18a4487b621043fd706e901ef825e131a6) commit
+
+#### Invalid credentials  
+
+Did you change admin password and are re-starting the server? Remember to `rm -r` the `data`, `backup`, and `config` folders if you want a clean re-start.
+
+#### ldap_modify: Other (e.g., implementation specific) error (80) modifying entry "cn=config"  
+
+One thing to check is ensure that the TLS cert says its version 3. Data: Version: should be 3. Below is example of problematic cert:  
+```
+$ openssl x509 -in abcl.pem -text -noout
+Certificate:
+    Data:
+        Version: 1 (0x0)
+        Serial Number: 14676524023181422786 (0xcbad7cd6eb3730c2)
+```
 
 LDAP documentation is clear as mud. [This](http://www.openldap.org/doc/admin24/) seems to be best resource.
 
