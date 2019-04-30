@@ -1,7 +1,13 @@
 # Learning LDAP
 
+This document describes:  
+- How to run an instance of OpenLDAP in a docker container  
+- How to interact with it using NodeJS  
+
+LDAP stands for Lightweight Directory Access Protocol. It is a spec and implementation can be anything. OpenLDAP is one implementation of LDAP and uses Memory Mapped DB (or MDB in short) database as the backing datastore by default [[1](http://www.openldap.org/pub/hyc/mdb-paper.pdf)]. The database organizes entries in a tree data structure. Because of this, reads are very fast.
+
 ## Create TLS certificates for client and server
-Left as exercise for the reader. See [1](https://github.com/siddjain/openssl-demo) for help. Ignore this step if you do not want to enable TLS.
+Left as exercise for the reader. See [[2](https://github.com/siddjain/openssl-demo)] for help. Ignore this step if you do not want to enable TLS.
 
 ## Create the LDAP server
 we use the docker image provided by [tiredofit](https://github.com/tiredofit/docker-openldap). Run:
@@ -12,17 +18,17 @@ e9aff6f10263f1b5ccce9677bfd640d9dc6e1357d8b6366f53a068368ac2e667
 ```
 
 ## Populate database with base entry and users group
-At this point the database is empty and it needs to be initialized with a root node in the LDAP tree [1](https://github.com/tiredofit/docker-openldap/issues/5). Do this by running:
+At this point the database is empty and the LDAP tree needs to be initialized with a root node [[3](https://github.com/tiredofit/docker-openldap/issues/5)]. Do this by running:
 ```
 $ LDAP_ADMIN_PASSWORD=superman LDAP_TLS_CRT_FILENAME=tls-server.pem LDAP_TLS_KEY_FILENAME=tls-server.key LDAP_SUBJECT_ALT_NAME=example.com LDAP_TLS_CA_CRT_FILENAME=ca-chain.pem LDAP_BASE_DN=dc=example,dc=com node init.js
 done
 ```
-The equiavlent commands to do this using the OpenLDAP CLI are as follows:
+The equivalent commands to do this using the OpenLDAP CLI are as follows:
 ```
-ldapadd -x -h jnj-ldap-server -p 389 -D "cn=admin,dc=example,dc=com" -w $LDAP_ADMIN_PASSWORD -f basedn.ldif 
-ldapadd -x -h jnj-ldap-server -p 389 -D "cn=admin,dc=example,dc=com" -w $LDAP_ADMIN_PASSWORD -f users.ldif 
+ldapadd -x -h my-ldap-server -p 389 -D "cn=admin,dc=example,dc=com" -w $LDAP_ADMIN_PASSWORD -f basedn.ldif 
+ldapadd -x -h my-ldap-server -p 389 -D "cn=admin,dc=example,dc=com" -w $LDAP_ADMIN_PASSWORD -f users.ldif 
 ```
-Above assumes no TLS. If you want to use TLS, add the `-Z` option at the end. Also you will need to define following environment variables: `LDAPTLS_CERT, LDAPTLS_KEY, LDAPTLS_CACERTDIR` [2](https://access.redhat.com/documentation/en-us/red_hat_directory_server/9.0/html/administration_guide/ldap-tools-examples#tab.ldap-tool-envvar). I still had some problems with it and hence had to resort to doing it with nodejs.
+Above assumes no TLS. If you want to use TLS, add the `-Z` option at the end. Also you will need to define following environment variables: `LDAPTLS_CERT, LDAPTLS_KEY, LDAPTLS_CACERTDIR` [[4](https://access.redhat.com/documentation/en-us/red_hat_directory_server/9.0/html/administration_guide/ldap-tools-examples#tab.ldap-tool-envvar)]. I still had some problems with it and hence had to resort to doing it with nodejs.
 
 ## Add a user to the database
 ```
@@ -40,7 +46,7 @@ done
 #### ldap server won't start  
 
 1. First make sure you have set environment variables to correct values etc.
-2. Try pinning the docker image to [this](https://github.com/tiredofit/docker-openldap/commit/87528f18a4487b621043fd706e901ef825e131a6) commit
+2. Try pinning the docker image to [this](https://github.com/tiredofit/docker-openldap/commit/87528f18a4487b621043fd706e901ef825e131a6) commit if all else fails. This is the commit used in the demo.
 
 #### Invalid credentials  
 
@@ -63,9 +69,13 @@ Verify your certificate is valid by running
 ```
 $ openssl verify -CAfile <ca-cert> <server-tls-cert>
 ```
-GnuTLS seems to have a bug because of which above can happen even when a genuine certificate is being used [1](https://github.com/siddjain/openldap-bug),[2](https://www.openldap.org/its/index.cgi/Incoming?id=9014). But the image used here is based on alpine and does not use GnuTLS.
+If verification passes, debug the issue using
+```
+$ openssl s_client -connect localhost:636 -state -nbio -CAfile my-ca-chain.pem -showcerts
+```
+as described in [[5](https://github.com/siddjain/openldap-bug)] e.g. The `slapd` that comes with debian seems to have a bug because of which above can happen even when a genuine certificate is being used [[6](https://www.openldap.org/its/index.cgi/Incoming?id=9014)]. The docker image used here is based on alpine and did not have this bug in our test.
 
-LDAP documentation is clear as mud. [This](http://www.openldap.org/doc/admin24/) seems to be best resource.
+LDAP documentation is clear as mud. Here are some resources [[7](http://www.openldap.org/doc/admin24/),[8](https://wiki.debian.org/LDAP/OpenLDAPSetup)].
 
 ## Miscellaneous
 
