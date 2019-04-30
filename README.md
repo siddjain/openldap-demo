@@ -20,7 +20,17 @@ e9aff6f10263f1b5ccce9677bfd640d9dc6e1357d8b6366f53a068368ac2e667
 ## Populate database with base entry and users group
 At this point the database is empty and the LDAP tree needs to be initialized with a root node [[3](https://github.com/tiredofit/docker-openldap/issues/5)]. Do this by running:
 ```
-$ LDAP_ADMIN_PASSWORD=superman LDAP_TLS_CRT_FILENAME=tls-server.pem LDAP_TLS_KEY_FILENAME=tls-server.key LDAP_SUBJECT_ALT_NAME=example.com LDAP_TLS_CA_CRT_FILENAME=ca-chain.pem LDAP_BASE_DN=dc=example,dc=com node init.js
+$ LDAP_CONFIG_PASSWORD=spiderman LDAP_ADMIN_PASSWORD=superman LDAP_TLS_CRT_FILENAME=tls-server.pem LDAP_TLS_KEY_FILENAME=tls-server.key LDAP_SUBJECT_ALT_NAME=example.com LDAP_TLS_CA_CRT_FILENAME=ca-chain.pem LDAP_BASE_DN=dc=example,dc=com node init.js
+```
+It should output:
+```
+logging in as admin...
+adding base entry...
+adding users group...
+logging out as admin...
+creating new client...
+logging in as cn=admin,cn=config...
+setting password policy...
 done
 ```
 The equivalent commands to do this using the OpenLDAP CLI are as follows:
@@ -28,7 +38,7 @@ The equivalent commands to do this using the OpenLDAP CLI are as follows:
 ldapadd -x -h my-ldap-server -p 389 -D "cn=admin,dc=example,dc=com" -w $LDAP_ADMIN_PASSWORD -f basedn.ldif 
 ldapadd -x -h my-ldap-server -p 389 -D "cn=admin,dc=example,dc=com" -w $LDAP_ADMIN_PASSWORD -f users.ldif 
 ```
-Above assumes no TLS. If you want to use TLS, add the `-Z` option at the end. Also you will need to define following environment variables: `LDAPTLS_CERT, LDAPTLS_KEY, LDAPTLS_CACERTDIR` [[4](https://access.redhat.com/documentation/en-us/red_hat_directory_server/9.0/html/administration_guide/ldap-tools-examples#tab.ldap-tool-envvar)]. I still had some problems with it and hence had to resort to doing it with nodejs.
+Above assumes no TLS. If you want to use TLS, add the `-Z` option at the end. Also you will need to define following environment variables: `LDAPTLS_CERT, LDAPTLS_KEY, LDAPTLS_CACERTDIR` [[4](http://www.openldap.org/doc/admin24/tls.html#Client%20Configuration)]. I still had some problems with it and hence had to resort to doing it with nodejs.
 
 ## Add a user to the database
 ```
@@ -73,9 +83,9 @@ If verification passes, debug the issue using
 ```
 $ openssl s_client -connect localhost:636 -state -nbio -CAfile my-ca-chain.pem -showcerts
 ```
-as described in [[5](https://github.com/siddjain/openldap-bug)] e.g. The `slapd` that comes with debian seems to have a bug because of which above can happen even when a genuine certificate is being used [[6](https://www.openldap.org/its/index.cgi/Incoming?id=9014)]. The docker image used here is based on alpine and did not have this bug in our test.
+as described e.g., in [[5](https://github.com/siddjain/openldap-bug)]. The `slapd` that comes with debian seems to have a bug because of which above can happen even when a genuine certificate is being used [[6](https://www.openldap.org/its/index.cgi/Incoming?id=9014)]. "If you generated them using OpenSSL, you're going to run into problems. Debian switched over to using gnutls a while ago, and it doesn't play nice with OpenSSL certificates" [7](https://wiki.debian.org/LDAP/OpenLDAPSetup). The docker image used here is based on alpine and did not have this bug in our test.
 
-LDAP documentation is clear as mud. Here are some resources [[7](http://www.openldap.org/doc/admin24/),[8](https://wiki.debian.org/LDAP/OpenLDAPSetup)].
+LDAP documentation is clear as mud. Here are some resources [[8](http://www.openldap.org/doc/admin24/),[9](http://www.zytrax.com/books/ldap/)].
 
 ## Miscellaneous
 
@@ -132,3 +142,10 @@ modifiersName: cn=admin,dc=example,dc=com
 modifyTimestamp: 20190429222207Z
 ...
 ```
+
+Another useful utility is [slappasswd](https://linux.die.net/man/8/slappasswd) which can be used to hash passwords:
+```
+bash-4.4# slappasswd -s "bob's cat"
+{SSHA}n724/QibgNQubG39r1Gu2fqH9l1SA6GB
+```
+The last four bytes are supposed to contain the salt [[10](https://serverfault.com/a/675846/77118)]

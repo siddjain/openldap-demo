@@ -26,9 +26,13 @@ function loadConfig() {
     var clientCertFile = tryGetEnv("LDAP_TLS_CRT_FILENAME");
     var clientKeyFile = tryGetEnv("LDAP_TLS_KEY_FILENAME");
     var subjectAltName = tryGetEnv("LDAP_SUBJECT_ALT_NAME");
-    var url = "ldap://" + host + ":" + port + "/" + baseDN;    
+    var baseUrl = "ldap://" + host + ":" + port + "/";
+    var url = baseUrl + baseDN;
+    var configUrl = baseUrl + "cn=config";
     var adminDN = "cn=admin," + baseDN;
+    var configDN = "cn=admin,cn=config";
     var adminPassword = tryGetEnv("LDAP_ADMIN_PASSWORD", "");
+    var configPassword = tryGetEnv("LDAP_CONFIG_PASSWORD", "");
     if (caCertFile) {        
         var tlsOpts = {
             ca: [fs.readFileSync(caCertFile)],
@@ -46,12 +50,20 @@ function loadConfig() {
         baseDN: baseDN,
         adminDN: adminDN,
         adminPassword: adminPassword,
+        configUrl: configUrl,
+        configDN: configDN,
+        configPassword: configPassword,
         tlsOptions: tlsOpts
     }
 }
 
-async function createClient(config) {
-    var client = new Client({url: config.url});
+async function createClient(config, isConfig) {
+    if (isConfig) {
+        var url = config.configUrl;
+    } else {
+        url = config.url;
+    }
+    var client = new Client({url: url});
     if (config.tlsOptions) {
         await client.starttls(config.tlsOptions, client.controls);
     }
