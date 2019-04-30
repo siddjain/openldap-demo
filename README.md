@@ -57,6 +57,14 @@ Certificate:
         Serial Number: 14676524023181422786 (0xcbad7cd6eb3730c2)
 ```
 
+#### Error: certificate signature failure
+
+Verify your certificate is valid by running
+```
+$ openssl verify -CAfile <ca-cert> <server-tls-cert>
+```
+GnuTLS seems to have a bug because of which above can happen even when a genuine certificate is being used [1](https://github.com/siddjain/openldap-bug),[2](https://www.openldap.org/its/index.cgi/Incoming?id=9014). But the image used here is based on alpine and does not use GnuTLS.
+
 LDAP documentation is clear as mud. [This](http://www.openldap.org/doc/admin24/) seems to be best resource.
 
 ## Miscellaneous
@@ -71,7 +79,11 @@ core.schema	   inetorgperson.schema  openldap.schema
 cosine.schema	   java.schema		 pmi.schema
 ```
 
-the rootPW (hashed) can be seen in `/etc/openldap/slapd.d/'cn=config'/'olcDatabase={1}mdb.ldif'`
+the rootPW (hashed) can be seen in `/etc/openldap/slapd.d/'cn=config'/'olcDatabase={1}mdb.ldif'` and also `/assets/slapd/config/bootstrap/ldif/01-config-password.ldif`
+
+Indexes can be seen in `/assets/slapd/config/bootstrap/ldif/05-index.ldif`
+
+Security Policies can be seen in `/assets/slapd/config/bootstrap/ldif/02-security.ldif`
 
 `ldap.conf` file can be found in `/etc/openldap/ldap.conf`
 
@@ -91,3 +103,22 @@ The storage scheme is stored as a prefix on the value, so a hashed password usin
 $ docker image inspect tiredofit/openldap 
 ```
 will show useful information
+
+There is a very useful utility called [slapcat](https://linux.die.net/man/8/slapcat) which can be used to view the OpenLDAP mdb database as plain-text. Here is an example:
+
+```
+bash-4.4# slapcat
+dn: dc=example,dc=com
+o: ABC Inc.
+objectClass: organization
+objectClass: dcObject
+structuralObjectClass: organization
+dc: example
+entryUUID: 48571d94-b774-499c-a17f-9eb9f10678f9
+creatorsName: cn=admin,dc=example,dc=com
+createTimestamp: 20190429222207Z
+entryCSN: 20190429222207.755664Z#000000#000#000000
+modifiersName: cn=admin,dc=example,dc=com
+modifyTimestamp: 20190429222207Z
+...
+```
