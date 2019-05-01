@@ -49,6 +49,12 @@ async function setPasswordPolicy(client) {
         }
     });
     // per https://serverfault.com/a/571989/77118
+	// this only sets the format in which hashed passwords will be stored
+	// it does not enable the hashing of passwords itself
+	// this setting will not have any effect if olcPPolicyHashCleartext has not been set to TRUE
+	// as explained in http://tutoriels.meddeb.net/openldap-password-policy-managing-users-accounts/
+	// also note that {SSHA} is the default setting of hashed passwords so technically this operation
+	// will be a no-op. we still do it for illustration purposes
     await client.modify("olcDatabase={-1}frontend,cn=config", change);    
 }
 

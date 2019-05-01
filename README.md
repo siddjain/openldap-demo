@@ -4,23 +4,34 @@ This document describes:
 - How to run an instance of OpenLDAP in a docker container  
 - How to interact with it using NodeJS  
 
-LDAP stands for Lightweight Directory Access Protocol. It is a spec and implementation can be anything. OpenLDAP is one implementation of LDAP and uses Memory Mapped DB (or MDB in short) database as the backing datastore by default [[1](http://www.openldap.org/pub/hyc/mdb-paper.pdf)]. The database organizes entries in a tree data structure. Because of this, reads are very fast.
+LDAP stands for Lightweight Directory Access Protocol. It is a spec and OpenLDAP is one implementation of LDAP and uses Memory Mapped DB (or MDB in short) database as the backing datastore by default [[1](http://www.openldap.org/pub/hyc/mdb-paper.pdf)]. The database organizes entries in a tree data structure. Because of this, reads are very fast.
 
 ## Create TLS certificates for client and server
-Left as exercise for the reader. See [[2](https://github.com/siddjain/openssl-demo)] for help. Ignore this step if you do not want to enable TLS.
+Left as exercise for the reader. See [[2](https://github.com/siddjain/openssl-demo)] for help. Ignore this step if you do not want to enable TLS. Sample certificates are included in the repo.
+
+## Build docker image
+we use a fork of the image provided by [tiredofit](https://github.com/tiredofit/docker-openldap) to which we have made some bug fixes. Clone the [fork](https://github.com/siddjain/docker-openldap) and build it as follows:
+```
+$ git clone https://github.com/siddjain/docker-openldap.git
+$ docker image build -t siddjain/openldap .
+```
+Complete successful build [log](https://gist.github.com/siddjain/0f8cc8629a3ac9063921c43179915e21) for reference
 
 ## Create the LDAP server
-we use the docker image provided by [tiredofit](https://github.com/tiredofit/docker-openldap). Run:
+Run:
 ```
 $ ./run-ldap-server.sh
-+ docker run -p 636:636 -p 389:389 --name my-ldap-server --volume /Users/sjain68/ldap-demo/certs:/assets/slapd/certs --volume /Users/sjain68/ldap-demo/backup:/data/backup --volume /Users/sjain68/ldap-demo/data:/var/lib/openldap --volume /Users/sjain68/ldap-demo/config:/etc/openldap/slapd.d --env BACKEND=mdb --env ENABLE_TLS=true --env BASE_DN=dc=example,dc=com --env TLS_CRT_FILENAME=tls-server.pem --env TLS_KEY_FILENAME=tls-server.key --env TLS_CA_CRT_FILENAME=ca-chain.pem --env TLS_VERIFY_CLIENT=demand --env TLS_ENFORCE=true --env HOSTNAME=localhost --env DOMAIN=example.com --env ADMIN_PASS=superman --env CONFIG_PASS=spiderman --env 'ORGANIZATION=Uber Inc.' --env LOG_LEVEL=1 --log-opt max-file=3 --log-opt max-size=10m --detach tiredofit/openldap
-e9aff6f10263f1b5ccce9677bfd640d9dc6e1357d8b6366f53a068368ac2e667
+```
+It should output something like:
+```
++ docker run -p 636:636 -p 389:389 --name my-ldap-server --volume /Users/sjain68/openldap-demo/certs:/assets/slapd/certs --volume /Users/sjain68/openldap-demo/backup:/data/backup --volume /Users/sjain68/openldap-demo/data:/var/lib/openldap --volume /Users/sjain68/openldap-demo/config:/etc/openldap/slapd.d --env BACKEND=mdb --env ENABLE_TLS=true --env BASE_DN=dc=example,dc=com --env TLS_CRT_FILENAME=tls-server.pem --env TLS_KEY_FILENAME=tls-server.key --env TLS_CA_CRT_FILENAME=ca-chain.pem --env TLS_VERIFY_CLIENT=demand --env TLS_ENFORCE=true --env HOSTNAME=localhost --env DOMAIN=example.com --env ADMIN_PASS=superman --env CONFIG_PASS=spiderman --env 'ORGANIZATION=Uber Inc.' --env LOG_LEVEL=1 --log-opt max-file=3 --log-opt max-size=10m --detach siddjain/openldap
+0d785cab3447ebeef4c81db52496223c1927f8ae63bec9319bcfbfd0d2e60e3f
 ```
 
 ## Populate database with base entry and users group
 At this point the database is empty and the LDAP tree needs to be initialized with a root node [[3](https://github.com/tiredofit/docker-openldap/issues/5)]. Do this by running:
 ```
-$ LDAP_CONFIG_PASSWORD=spiderman LDAP_ADMIN_PASSWORD=superman LDAP_TLS_CRT_FILENAME=tls-server.pem LDAP_TLS_KEY_FILENAME=tls-server.key LDAP_SUBJECT_ALT_NAME=example.com LDAP_TLS_CA_CRT_FILENAME=ca-chain.pem LDAP_BASE_DN=dc=example,dc=com node init.js
+$ LDAP_CONFIG_PASSWORD=spiderman LDAP_ADMIN_PASSWORD=superman LDAP_TLS_CRT_FILENAME=tls-server.pem LDAP_TLS_KEY_FILENAME=tls-server.key LDAP_SUBJECT_ALT_NAME=localhost LDAP_TLS_CA_CRT_FILENAME=ca-chain.pem LDAP_BASE_DN=dc=example,dc=com node init.js
 ```
 It should output:
 ```
@@ -42,7 +53,7 @@ Above assumes no TLS. If you want to use TLS, add the `-Z` option at the end. Al
 
 ## Add a user to the database
 ```
-$ LDAP_ADMIN_PASSWORD=superman LDAP_TLS_CRT_FILENAME=tls-server.pem LDAP_TLS_KEY_FILENAME=tls-server.key LDAP_SUBJECT_ALT_NAME=example.com LDAP_TLS_CA_CRT_FILENAME=ca-chain.pem LDAP_BASE_DN=dc=example,dc=com node add-user.js
+$ LDAP_ADMIN_PASSWORD=superman LDAP_TLS_CRT_FILENAME=tls-server.pem LDAP_TLS_KEY_FILENAME=tls-server.key LDAP_SUBJECT_ALT_NAME=localhost LDAP_TLS_CA_CRT_FILENAME=ca-chain.pem LDAP_BASE_DN=dc=example,dc=com node add-user.js
 logged in as admin
 uid=bob,ou=users,dc=example,dc=com already exists
 deleting uid=bob,ou=users,dc=example,dc=com
@@ -51,12 +62,67 @@ tested logging with uid=bob,ou=users,dc=example,dc=com credentials
 done
 ```
 
+## Verify
+Log in to the container
+```
+$ docker exec -it my-ldap-server /bin/bash
+```
+
+Run [slapcat](https://linux.die.net/man/8/slapcat):
+```
+bash-4.4# slapcat
+dn: dc=example,dc=com
+o: ABC Inc.
+objectClass: organization
+objectClass: dcObject
+structuralObjectClass: organization
+dc: example
+entryUUID: 7fab57d8-3bc5-4fc8-a67e-3ad7941bab33
+creatorsName: cn=admin,dc=example,dc=com
+createTimestamp: 20190501211554Z
+entryCSN: 20190501211554.790901Z#000000#000#000000
+modifiersName: cn=admin,dc=example,dc=com
+modifyTimestamp: 20190501211554Z
+
+dn: ou=users,dc=example,dc=com
+objectClass: top
+objectClass: organizationalUnit
+structuralObjectClass: organizationalUnit
+ou: users
+entryUUID: 50fa66ff-cd60-4b94-9c3c-8aa4c061a9ed
+creatorsName: cn=admin,dc=example,dc=com
+createTimestamp: 20190501211554Z
+entryCSN: 20190501211554.795418Z#000000#000#000000
+modifiersName: cn=admin,dc=example,dc=com
+modifyTimestamp: 20190501211554Z
+
+dn: uid=bob,ou=users,dc=example,dc=com
+cn: bob
+sn: Robert
+uid: bob
+mail: bob@example.org
+objectClass: inetOrgPerson
+userPassword:: e1NTSEF9UnhkMXFLcitMUVE0UFdzK3FXZHNnN0JIQzljNmtFVFc=
+structuralObjectClass: inetOrgPerson
+entryUUID: 06aae4a8-5c5b-4cae-b00d-d0b1ab875c08
+creatorsName: cn=admin,dc=example,dc=com
+createTimestamp: 20190501211630Z
+entryCSN: 20190501211630.009352Z#000000#000#000000
+modifiersName: cn=admin,dc=example,dc=com
+modifyTimestamp: 20190501211630Z
+```
+
+Decode Bob's password:
+```
+bash-4.4# base64 -d <<< e1NTSEF9UnhkMXFLcitMUVE0UFdzK3FXZHNnN0JIQzljNmtFVFc=
+{SSHA}Rxd1qKr+LQQ4PWs+qWdsg7BHC9c6kETW
+```
+
+## Finally
+
+Remember to `rm -r` the `data`, `backup`, and `config` folders to do a clean re-start. If these folders are not deleted, then the [initialization](https://github.com/siddjain/docker-openldap/blob/master/install/etc/cont-init.d/10-openldap) script will not run. The server will be re-started using the settings of previous run.
+
 ## Troubleshooting
-
-#### ldap server won't start  
-
-1. First make sure you have set environment variables to correct values etc.
-2. Try pinning the docker image to [this](https://github.com/tiredofit/docker-openldap/commit/87528f18a4487b621043fd706e901ef825e131a6) commit if all else fails. This is the commit used in the demo.
 
 #### Invalid credentials  
 
@@ -79,13 +145,13 @@ Verify your certificate is valid by running
 ```
 $ openssl verify -CAfile <ca-cert> <server-tls-cert>
 ```
-If verification passes, debug the issue using
+If that passes, debug the issue using
 ```
 $ openssl s_client -connect localhost:636 -state -nbio -CAfile my-ca-chain.pem -showcerts
 ```
-as described e.g., in [[5](https://github.com/siddjain/openldap-bug)]. The `slapd` that comes with debian seems to have a bug because of which above can happen even when a genuine certificate is being used [[6](https://www.openldap.org/its/index.cgi/Incoming?id=9014)]. "If you generated them using OpenSSL, you're going to run into problems. Debian switched over to using gnutls a while ago, and it doesn't play nice with OpenSSL certificates" [7](https://wiki.debian.org/LDAP/OpenLDAPSetup). The docker image used here is based on alpine and did not have this bug in our test.
+as described e.g., in [[5](https://github.com/siddjain/openldap-bug)]. The `slapd` that comes with debian seems to have a bug because of which above can happen even when a genuine certificate is being used [[6](https://www.openldap.org/its/index.cgi/Incoming?id=9014)]. "If you generated them using OpenSSL, you're going to run into problems. Debian switched over to using gnutls a while ago, and it doesn't play nice with OpenSSL certificates" [[7](https://wiki.debian.org/LDAP/OpenLDAPSetup)]. The docker image used here is based on alpine and did not have this bug in our test.
 
-LDAP documentation is clear as mud. Here are some resources [[8](http://www.openldap.org/doc/admin24/),[9](http://www.zytrax.com/books/ldap/)].
+LDAP documentation is clear as mud and you will find conflicting answers to same question. Here are some resources [[8](http://www.openldap.org/doc/admin24/),[9](http://www.zytrax.com/books/ldap/)] but by no means the best.
 
 ## Miscellaneous
 
@@ -99,7 +165,7 @@ core.schema	   inetorgperson.schema  openldap.schema
 cosine.schema	   java.schema		 pmi.schema
 ```
 
-the rootPW (hashed) can be seen in `/etc/openldap/slapd.d/'cn=config'/'olcDatabase={1}mdb.ldif'` and also `/assets/slapd/config/bootstrap/ldif/01-config-password.ldif`
+the rootPW (base64 encoded) can be seen in `/etc/openldap/slapd.d/'cn=config'/'olcDatabase={1}mdb.ldif'` and also `/assets/slapd/config/bootstrap/ldif/01-config-password.ldif`
 
 Indexes can be seen in `/assets/slapd/config/bootstrap/ldif/05-index.ldif`
 
@@ -107,45 +173,25 @@ Security Policies can be seen in `/assets/slapd/config/bootstrap/ldif/02-securit
 
 `ldap.conf` file can be found in `/etc/openldap/ldap.conf`
 
-this is the startup script:
-https://github.com/tiredofit/docker-openldap/blob/master/install/etc/s6/services/10-openldap/run
+this is the command that starts the server:
+
 ```
 bash-4.4# cat /run/openldap/slapd.args
 /usr/sbin/slapd -h ldap://localhost ldaps://localhost ldapi:/// -u ldap -g ldap -d 1  ##### this is how openldap is started.
 ```
 
-https://www.openldap.org/doc/admin24/security.html#SSHA%20password%20storage%20scheme
-The storage scheme is stored as a prefix on the value, so a hashed password using the Salted SHA1 (SSHA) scheme looks like:
- userPassword: {SSHA}DkMTwBl+a/3DQTxCYEApdUtNXGgdUac3 
- 
+
+From [[10](https://www.openldap.org/doc/admin24/security.html#SSHA%20password%20storage%20scheme)], "The storage scheme is stored as a prefix on the value, so a hashed password using the Salted SHA1 (SSHA) scheme looks like:
+ userPassword: {SSHA}DkMTwBl+a/3DQTxCYEApdUtNXGgdUac3 "
+The last four bytes are supposed to contain the salt [[11](https://serverfault.com/a/675846/77118)] 
  
 ```
-$ docker image inspect tiredofit/openldap 
+$ docker image inspect siddjain/openldap 
 ```
 will show useful information
 
-There is a very useful utility called [slapcat](https://linux.die.net/man/8/slapcat) which can be used to view the OpenLDAP mdb database as plain-text. Here is an example:
-
-```
-bash-4.4# slapcat
-dn: dc=example,dc=com
-o: ABC Inc.
-objectClass: organization
-objectClass: dcObject
-structuralObjectClass: organization
-dc: example
-entryUUID: 48571d94-b774-499c-a17f-9eb9f10678f9
-creatorsName: cn=admin,dc=example,dc=com
-createTimestamp: 20190429222207Z
-entryCSN: 20190429222207.755664Z#000000#000#000000
-modifiersName: cn=admin,dc=example,dc=com
-modifyTimestamp: 20190429222207Z
-...
-```
-
-Another useful utility is [slappasswd](https://linux.die.net/man/8/slappasswd) which can be used to hash passwords:
+[slappasswd](https://linux.die.net/man/8/slappasswd) is a utility that can be used to hash passwords:
 ```
 bash-4.4# slappasswd -s "bob's cat"
 {SSHA}n724/QibgNQubG39r1Gu2fqH9l1SA6GB
 ```
-The last four bytes are supposed to contain the salt [[10](https://serverfault.com/a/675846/77118)]
