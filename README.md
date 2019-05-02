@@ -7,10 +7,10 @@ This document describes:
 LDAP stands for Lightweight Directory Access Protocol. It is a spec and OpenLDAP is one implementation of LDAP and uses Memory Mapped DB (or MDB in short) database as the backing datastore by default [[1](http://www.openldap.org/pub/hyc/mdb-paper.pdf)]. The database organizes entries in a tree data structure. Because of this, reads are very fast.
 
 ## Create TLS certificates for client and server
-Left as exercise for the reader. See [[2](https://github.com/siddjain/openssl-demo)] for help. Ignore this step if you do not want to enable TLS. Sample certificates are included in the repo.
+Left as exercise for the reader. See [[2](https://sourcecode.jnj.com/users/sjain68/repos/openssl_demo/browse)] for help. Ignore this step if you do not want to enable TLS. Sample certificates are included in the repo.
 
 ## Build docker image
-we use a fork of the image provided by [tiredofit](https://github.com/tiredofit/docker-openldap) to which we have made some bug fixes. Clone the [fork](https://github.com/siddjain/docker-openldap) and build it as follows:
+we use a fork of the image provided by [tiredofit](https://github.com/tiredofit/docker-openldap) to which we have made some bug fixes. Clone the [fork](https://sourcecode.jnj.com/users/sjain68/repos/docker_openldap/browse) and build it as follows:
 ```
 $ git clone https://github.com/siddjain/docker-openldap.git
 $ docker image build -t siddjain/openldap .
