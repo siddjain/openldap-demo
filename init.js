@@ -1,5 +1,6 @@
 const ldapjs = require("./ldapjs-client");
 const fs = require("fs");
+const readline = require("readline");
 const utils = ldapjs.utils;
 const config = utils.loadConfig();
 
@@ -58,4 +59,15 @@ async function setPasswordPolicy(client) {
     await client.modify("olcDatabase={-1}frontend,cn=config", change);    
 }
 
-main().then(() => console.log("done") );
+console.log(config);
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  
+rl.question('Continue? (y/n) ', (answer) => {
+    if (answer === "y") {
+        main().then(() => console.log("done") );
+    }
+    rl.close();
+});

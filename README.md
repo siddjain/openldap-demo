@@ -53,7 +53,7 @@ Above assumes no TLS. If you want to use TLS, add the `-Z` option at the end. Al
 
 ## Add a user to the database
 ```
-$ LDAP_ADMIN_PASSWORD=superman LDAP_TLS_CRT_FILENAME=tls-server.pem LDAP_TLS_KEY_FILENAME=tls-server.key LDAP_SUBJECT_ALT_NAME=localhost LDAP_TLS_CA_CRT_FILENAME=ca-chain.pem LDAP_BASE_DN=dc=example,dc=com node add-user.js
+$ LDAP_ADMIN_PASSWORD=superman LDAP_TLS_CRT_FILENAME=tls-server.pem LDAP_TLS_KEY_FILENAME=tls-server.key LDAP_SUBJECT_ALT_NAME=localhost LDAP_TLS_CA_CRT_FILENAME=ca-chain.pem LDAP_BASE_DN=dc=example,dc=com node add-user.js bob "bob's cat" "Robert Wilson"
 logged in as admin
 uid=bob,ou=users,dc=example,dc=com already exists
 deleting uid=bob,ou=users,dc=example,dc=com
@@ -97,10 +97,9 @@ modifiersName: cn=admin,dc=example,dc=com
 modifyTimestamp: 20190501211554Z
 
 dn: uid=bob,ou=users,dc=example,dc=com
-cn: bob
-sn: Robert
+cn: Robert Wilson
+sn: Wilson
 uid: bob
-mail: bob@example.org
 objectClass: inetOrgPerson
 userPassword:: e1NTSEF9UnhkMXFLcitMUVE0UFdzK3FXZHNnN0JIQzljNmtFVFc=
 structuralObjectClass: inetOrgPerson
@@ -112,7 +111,7 @@ modifiersName: cn=admin,dc=example,dc=com
 modifyTimestamp: 20190501211630Z
 ```
 
-Decode Bob's password:
+The `::` against `userPassword` means the value is base64 encoded. Decode Bob's password:
 ```
 bash-4.4# base64 -d <<< e1NTSEF9UnhkMXFLcitMUVE0UFdzK3FXZHNnN0JIQzljNmtFVFc=
 {SSHA}Rxd1qKr+LQQ4PWs+qWdsg7BHC9c6kETW

@@ -3,13 +3,14 @@
 # - also see https://github.com/tiredofit/docker-openldap/blob/master/examples/docker-compose.yml for reference
 set -e
 IMAGE="siddjain/openldap"
+NETWORK=${NETWORK:-bridge}
 CONTAINER_NAME=${CONTAINER_NAME:-"my-ldap-server"}
 LDAP_ORGANIZATION=${ORGANIZATION:-"Uber Inc."}
 LDAP_ADMIN_PASSWORD=${LDAP_ADMIN_PASSWORD:-"superman"}
 LDAP_CONFIG_PASSWORD=${LDAP_CONFIG_PASSWORD:-"spiderman"}
 LDAP_DOMAIN=${LDAP_DOMAIN:-"example.com"}
 LDAP_BASE_DN=${LDAP_BASE_DN:-"dc=example,dc=com"}
-LDAP_TLS_CRT_FILENAME=${LDAP_TLS_CERT_FILENAME:-"tls-server.pem"}
+LDAP_TLS_CRT_FILENAME=${LDAP_TLS_CRT_FILENAME:-"tls-server.pem"}
 LDAP_TLS_KEY_FILENAME=${LDAP_TLS_KEY_FILENAME:-"tls-server.key"}
 LDAP_TLS_CA_CRT_FILENAME=${LDAP_TLS_CA_CRT_FILENAME:-"ca-chain.pem"}
 LDAP_PORT=${LDAP_PORT:-389}
@@ -39,6 +40,7 @@ set -x
 # Waiting for OpenLDAP to be ready. see https://github.com/tiredofit/docker-openldap/issues/4
 docker run -p $LDAPS_PORT:636 -p $LDAP_PORT:389 \
 --name $CONTAINER_NAME \
+--network $NETWORK \
 --volume ${PWD}/certs:/assets/slapd/certs \
 --volume ${PWD}/backup:/data/backup \
 --volume ${PWD}/data:/var/lib/openldap \
