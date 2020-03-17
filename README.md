@@ -7,10 +7,10 @@ This document describes:
 LDAP stands for Lightweight Directory Access Protocol. It is a spec and OpenLDAP is one implementation of LDAP and uses Memory Mapped DB (or MDB in short) database as the backing datastore by default [[1](http://www.openldap.org/pub/hyc/mdb-paper.pdf)]. The database organizes entries in a tree data structure. Because of this, reads are very fast.
 
 ## Create TLS certificates for client and server
-Left as exercise for the reader. See [[2](https://sourcecode.jnj.com/users/sjain68/repos/openssl_demo/browse)] for help. Ignore this step if you do not want to enable TLS. Sample certificates are included in the repo.
+Left as exercise for the reader. See [[2](https://github.com/siddjain/openssl-demo)] for help. Ignore this step if you do not want to enable TLS. Sample certificates are included in the repo.
 
 ## Build docker image
-we use a fork of the image provided by [tiredofit](https://github.com/tiredofit/docker-openldap) to which we have made some bug fixes. Clone the [fork](https://sourcecode.jnj.com/users/sjain68/repos/docker_openldap/browse) and build it as follows:
+we use a fork of the image provided by [tiredofit](https://github.com/tiredofit/docker-openldap) to which we have made some bug fixes. Clone the [fork](https://github.com/siddjain/docker-openldap) and build it as follows:
 ```
 $ git clone https://github.com/siddjain/docker-openldap.git
 $ docker image build -t siddjain/openldap .
@@ -22,11 +22,24 @@ Run:
 ```
 $ ./run-ldap-server.sh
 ```
+
 It should output something like:
 ```
 + docker run -p 636:636 -p 389:389 --name my-ldap-server --volume /Users/sjain68/openldap-demo/certs:/assets/slapd/certs --volume /Users/sjain68/openldap-demo/backup:/data/backup --volume /Users/sjain68/openldap-demo/data:/var/lib/openldap --volume /Users/sjain68/openldap-demo/config:/etc/openldap/slapd.d --env BACKEND=mdb --env ENABLE_TLS=true --env BASE_DN=dc=example,dc=com --env TLS_CRT_FILENAME=tls-server.pem --env TLS_KEY_FILENAME=tls-server.key --env TLS_CA_CRT_FILENAME=ca-chain.pem --env TLS_VERIFY_CLIENT=demand --env TLS_ENFORCE=true --env HOSTNAME=localhost --env DOMAIN=example.com --env ADMIN_PASS=superman --env CONFIG_PASS=spiderman --env 'ORGANIZATION=Uber Inc.' --env LOG_LEVEL=1 --log-opt max-file=3 --log-opt max-size=10m --detach siddjain/openldap
 0d785cab3447ebeef4c81db52496223c1927f8ae63bec9319bcfbfd0d2e60e3f
 ```
+
+Tip: If you look at the logs there will be a long pause at:
+```
+** [openldap] Starting TLS configuration. Please wait...
+```
+
+The logs can be stored in a text file by running:
+```
+$ docker logs jnj-ldap-server >& log.txt
+```
+
+The `&` is somehow necessary. Without it, the log contains only a few lines. [Here](https://gist.github.com/siddjain/352d921d207e90fc27f0a3fc0ff6345b) is complete log of successful startup.
 
 ## Populate database with base entry and users group
 At this point the database is empty and the LDAP tree needs to be initialized with a root node [[3](https://github.com/tiredofit/docker-openldap/issues/5)]. Do this by running:
@@ -171,6 +184,15 @@ Indexes can be seen in `/assets/slapd/config/bootstrap/ldif/05-index.ldif`
 Security Policies can be seen in `/assets/slapd/config/bootstrap/ldif/02-security.ldif`
 
 `ldap.conf` file can be found in `/etc/openldap/ldap.conf`
+```
+bash-4.4# cat /etc/openldap/ldap.conf
+BASE dc=uber,dc=com
+URI  ldap://localhost
+TLS_CACERT /assets/slapd/certs/ca-chain.pem
+TLS_REQCERT demand
+```
+
+Initialization script: https://github.com/siddjain/docker-openldap/blob/master/install/etc/cont-init.d/10-openldap
 
 this is the command that starts the server:
 
@@ -178,7 +200,6 @@ this is the command that starts the server:
 bash-4.4# cat /run/openldap/slapd.args
 /usr/sbin/slapd -h ldap://localhost ldaps://localhost ldapi:/// -u ldap -g ldap -d 1  ##### this is how openldap is started.
 ```
-
 
 From [[10](https://www.openldap.org/doc/admin24/security.html#SSHA%20password%20storage%20scheme)], "The storage scheme is stored as a prefix on the value, so a hashed password using the Salted SHA1 (SSHA) scheme looks like:
  userPassword: {SSHA}DkMTwBl+a/3DQTxCYEApdUtNXGgdUac3 "

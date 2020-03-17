@@ -10,13 +10,20 @@ LDAP_ADMIN_PASSWORD=${LDAP_ADMIN_PASSWORD:-"superman"}
 LDAP_CONFIG_PASSWORD=${LDAP_CONFIG_PASSWORD:-"spiderman"}
 LDAP_DOMAIN=${LDAP_DOMAIN:-"example.com"}
 LDAP_BASE_DN=${LDAP_BASE_DN:-"dc=example,dc=com"}
+# see http://www.openldap.org/software//man.cgi?query=ldap.conf&sektion=5&apropos=0&manpath=OpenLDAP+2.4-Release for explanation of TLS options
+# this will be the TLS cert that the openldap server will send to a client when TLS is enabled
 LDAP_TLS_CRT_FILENAME=${LDAP_TLS_CRT_FILENAME:-"tls-server.pem"}
+# this will be the private key corresponding to the public cert
 LDAP_TLS_KEY_FILENAME=${LDAP_TLS_KEY_FILENAME:-"tls-server.key"}
+# this file will have all the CA(s) recognized by the openldap server. To be used when client auth is enabled to verify client cert.
+# The TLS_CACERT is always used before TLS_CACERTDIR. This value gets written to /etc/openldap/ldap.conf
+# in https://github.com/tiredofit/docker-openldap/blob/master/install/etc/cont-init.d/10-openldap 
 LDAP_TLS_CA_CRT_FILENAME=${LDAP_TLS_CA_CRT_FILENAME:-"ca-chain.pem"}
 LDAP_PORT=${LDAP_PORT:-389}
 LDAPS_PORT=${LDAPS_PORT:-636}
 LDAP_ENABLE_TLS=${LDAP_ENABLE_TLS:-true}
 LDAP_ENFORCE_TLS=${LDAP_ENFORCE_TLS:-true}
+# enable client auth (aka mutual authentication)
 LDAP_TLS_VERIFY_CLIENT=${LDAP_TLS_VERIFY_CLIENT:-demand}
 LDAP_LOG_LEVEL=${LDAP_LOG_LEVEL:-1}
 if [ ! -d certs ]; then
